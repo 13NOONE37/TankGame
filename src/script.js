@@ -124,7 +124,92 @@ gltfLoader.load('./Models/tank.glb', (model) => {
   scene.add(tank);
   camera.lookAt(tank.position);
 });
+
 debugObject.tubeRotation = -1.5707962925663566;
+debugObject.isRunning = false;
+debugObject.isGoForward = false;
+debugObject.isGoBackward = false;
+debugObject.isGoLeft = false;
+debugObject.isGoRight = false;
+debugObject.tankVelocity = 0;
+
+window.addEventListener('keydown', ({ keyCode }) => {
+  switch (keyCode) {
+    case 69: {
+      console.log('toggle engine');
+      break;
+    }
+    case 87: {
+      console.log('move forward');
+      debugObject.isGoForward = true;
+      // tank.position.x -= 0.05;
+      break;
+    }
+    case 83: {
+      console.log('move backward');
+      debugObject.isGoBackward = true;
+      // tank.position.x += 0.05;
+      break;
+    }
+    case 65: {
+      console.log('move left');
+      debugObject.isGoLeft = true;
+      // tank.rotation.y += 0.05;
+      break;
+    }
+    case 68: {
+      console.log('move right');
+      debugObject.isGoRight = true;
+      // tank.rotation.y -= 0.05;
+      break;
+    }
+    case 32: {
+      console.log('brake');
+      break;
+    }
+    case 16: {
+      console.log('boost');
+      break;
+    }
+  }
+});
+window.addEventListener('keyup', ({ keyCode }) => {
+  switch (keyCode) {
+    case 69: {
+      console.log('toggle engine');
+      break;
+    }
+    case 87: {
+      console.log('move forward');
+      debugObject.isGoForward = false;
+
+      break;
+    }
+    case 83: {
+      console.log('move backward');
+      debugObject.isGoBackward = false;
+      break;
+    }
+    case 65: {
+      console.log('move left');
+      debugObject.isGoLeft = false;
+      break;
+    }
+    case 68: {
+      console.log('move right');
+      debugObject.isGoRight = false;
+      break;
+    }
+    case 32: {
+      console.log('brake');
+      break;
+    }
+    case 16: {
+      console.log('boost');
+      break;
+    }
+  }
+});
 
 gui
   .add(debugObject, 'tubeRotation')
@@ -199,11 +284,15 @@ const tick = () => {
   const elapsedTime = clock.getElapsedTime();
 
   if (tank) {
-    // tank.position.x = Math.sin(elapsedTime) * 2;
-    // tank.position.z = Math.cos(elapsedTime) * 2;
-    // tank.rotation.y = elapsedTime;
     tank.children[2].rotation.z = debugObject.tubeRotation;
+    if (debugObject.isGoForward) {
+      tank.position.x -= Math.sin(elapsedTime * 0.05);
+    }
+    if (debugObject.isGoBackward) {
+      tank.position.x += Math.sin(elapsedTime * 0.05);
+    }
   }
+
   // Update controls
   controls.update();
   //Update renderer
