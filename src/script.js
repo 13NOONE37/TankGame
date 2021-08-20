@@ -2,11 +2,23 @@ import './style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import * as dat from 'dat.gui';
+import * as CANNON from 'cannon-es';
+import Stats from 'stats.js';
 
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
+import createCube from './ObjectsGenerate/createCube';
+import controler from './Control/controler';
+
+import { BufferAttribute } from 'three';
+
 //Configruation
+
+//fps
+let stats = new Stats();
+stats.showPanel(0);
+document.body.appendChild(stats.dom);
 
 //Loaders
 const loaderManager = new THREE.LoadingManager(
@@ -43,7 +55,6 @@ const sizes = {
   width: window.innerWidth,
   height: window.innerHeight,
 };
-
 window.addEventListener('resize', () => {
   //Update sizes
   sizes.width = window.innerWidth;
@@ -73,8 +84,8 @@ scene.add(camera);
 const controls = new OrbitControls(camera, canvas);
 controls.target.set(0, 0.75, 0);
 controls.enableDamping = true;
-controls.minDistance = 5;
-controls.maxDistance = 15;
+// controls.minDistance = 5;
+// controls.maxDistance = 15;
 
 //Renderer
 const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
@@ -102,6 +113,7 @@ const updateAllMaterials = () => {
     }
   });
 };
+
 //textures
 const envMap = cubeTextureLoader.load([
   '/Textures/environmentMaps/0/px.jpg',
@@ -122,9 +134,7 @@ gltfLoader.load('./Models/tank.glb', (model) => {
   tank = model.scene;
   console.log(tank);
   scene.add(tank);
-  camera.lookAt(tank.position);
 });
-
 debugObject.tubeRotation = -1.5707962925663566;
 debugObject.isRunning = false;
 debugObject.isGoForward = false;
@@ -133,83 +143,8 @@ debugObject.isGoLeft = false;
 debugObject.isGoRight = false;
 debugObject.tankVelocity = 0;
 
-window.addEventListener('keydown', ({ keyCode }) => {
-  switch (keyCode) {
-    case 69: {
-      console.log('toggle engine');
-      break;
-    }
-    case 87: {
-      console.log('move forward');
-      debugObject.isGoForward = true;
-      // tank.position.x -= 0.05;
-      break;
-    }
-    case 83: {
-      console.log('move backward');
-      debugObject.isGoBackward = true;
-      // tank.position.x += 0.05;
-      break;
-    }
-    case 65: {
-      console.log('move left');
-      debugObject.isGoLeft = true;
-      // tank.rotation.y += 0.05;
-      break;
-    }
-    case 68: {
-      console.log('move right');
-      debugObject.isGoRight = true;
-      // tank.rotation.y -= 0.05;
-      break;
-    }
-    case 32: {
-      console.log('brake');
-      break;
-    }
-    case 16: {
-      console.log('boost');
-      break;
-    }
-  }
-});
-window.addEventListener('keyup', ({ keyCode }) => {
-  switch (keyCode) {
-    case 69: {
-      console.log('toggle engine');
-      break;
-    }
-    case 87: {
-      console.log('move forward');
-      debugObject.isGoForward = false;
-
-      break;
-    }
-    case 83: {
-      console.log('move backward');
-      debugObject.isGoBackward = false;
-      break;
-    }
-    case 65: {
-      console.log('move left');
-      debugObject.isGoLeft = false;
-      break;
-    }
-    case 68: {
-      console.log('move right');
-      debugObject.isGoRight = false;
-      break;
-    }
-    case 32: {
-      console.log('brake');
-      break;
-    }
-    case 16: {
-      console.log('boost');
-      break;
-    }
-  }
-});
+//control
+controler(debugObject);
 
 gui
   .add(debugObject, 'tubeRotation')
@@ -232,13 +167,38 @@ gui
 // Light
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
 scene.add(ambientLight);
-const directionalLight = new THREE.PointLight(0xffffff, 15);
-directionalLight.position.set(5, 5, 15);
+const directionalLight = new THREE.PointLight(0xffffff, 35);
+directionalLight.position.set(25, 40, 25);
 directionalLight.castShadow = true;
 directionalLight.shadow.mapSize.width = 2024;
 directionalLight.shadow.mapSize.height = 2024;
 directionalLight.shadow.normalBias = 0.05;
 scene.add(directionalLight);
+
+gui
+  .add(directionalLight.position, 'x')
+  .min(-20)
+  .max(20)
+  .step(0.1)
+  .name('Directional light X');
+gui
+  .add(directionalLight.position, 'y')
+  .min(0)
+  .max(40)
+  .step(0.1)
+  .name('Directional light Y');
+gui
+  .add(directionalLight.position, 'z')
+  .min(-20)
+  .max(20)
+  .step(0.1)
+  .name('Directional light Z');
+gui
+  .add(directionalLight, 'intensity')
+  .min(0)
+  .max(100)
+  .step(0.001)
+  .name('Directional light intensity');
 
 // Floor
 
@@ -248,29 +208,36 @@ const floorAmbientTexture = textureLoader.load(
 const floorBaseColor = textureLoader.load('./Textures/floor/basecolor.jpg');
 floorBaseColor.wrapS = THREE.RepeatWrapping;
 floorBaseColor.wrapT = THREE.RepeatWrapping;
-floorBaseColor.repeat.set(8, 8);
+floorBaseColor.repeat.set(18, 18);
 
 const floorHeight = textureLoader.load('./Textures/floor/height.png');
+floorHeight.wrapS = THREE.RepeatWrapping;
+floorHeight.wrapT = THREE.RepeatWrapping;
+floorHeight.repeat.set(18, 18);
+
 const floorNormal = textureLoader.load('./Textures/floor/normal.jpg');
 floorNormal.wrapS = THREE.RepeatWrapping;
 floorNormal.wrapT = THREE.RepeatWrapping;
-floorNormal.repeat.set(8, 8);
+floorNormal.repeat.set(18, 18);
+
 const floorRoughness = textureLoader.load('./Textures/floor/roughness.jpg');
-// floorBaseColor.wrapS = THREE.RepeatWrapping;
-// floorBaseColor.wrapT = THREE.RepeatWrapping;
-// floorBaseColor.repeat.set(8, 8);
 
 const floorGeometry = new THREE.PlaneBufferGeometry(100, 100, 100, 100);
 const floorMaterial = new THREE.MeshStandardMaterial({
-  // displacementMap: floorHeight,
-  // displacementScale: 0.1,
+  displacementMap: floorHeight,
+  displacementScale: 0.3,
   aoMap: floorAmbientTexture,
+  aoMapIntensity: 2,
   map: floorBaseColor,
   normalMap: floorNormal,
   roughnessMap: floorRoughness,
 });
-floorMaterial.texture;
+
 const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+floor.geometry.setAttribute(
+  'uv2',
+  new BufferAttribute(floor.geometry.attributes.uv.array, 2),
+);
 floor.rotateX(-Math.PI * 0.5);
 scene.add(floor);
 
@@ -282,11 +249,16 @@ const clock = new THREE.Clock();
 
 const tick = () => {
   const elapsedTime = clock.getElapsedTime();
+  stats.begin();
 
   if (tank) {
+    camera.lookAt(tank.position);
     tank.children[2].rotation.z = debugObject.tubeRotation;
     if (debugObject.isGoForward) {
       tank.position.x -= Math.sin(elapsedTime * 0.05);
+      if (debugObject.isGoLeft) {
+        tank.rotation.y += elapsedTime * 0.01;
+      }
     }
     if (debugObject.isGoBackward) {
       tank.position.x += Math.sin(elapsedTime * 0.05);
@@ -297,6 +269,8 @@ const tick = () => {
   controls.update();
   //Update renderer
   renderer.render(scene, camera);
+
+  stats.end();
   requestAnimationFrame(tick);
 };
 tick();
