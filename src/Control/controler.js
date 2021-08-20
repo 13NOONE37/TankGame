@@ -4,8 +4,9 @@ const controler = (debugObject, xPosition, yPosition) => {
     console.log('shoot');
   });
   //viewfinder
-  window.addEventListener('mousemove', ({ offsetX, offsetY }) => {
-    console.log(offsetX, offsetY);
+  window.addEventListener('mousemove', ({ offsetX, offsetY, clientY }) => {
+    // console.log(offsetX, offsetY;
+    debugObject.tubeRotation = (clientY / window.innerHeight) * 0.6 - 1.6;
   });
 
   //move tank

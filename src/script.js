@@ -135,6 +135,15 @@ gltfLoader.load('./Models/tank.glb', (model) => {
   console.log(tank);
   scene.add(tank);
 });
+
+let barrel;
+
+gltfLoader.load('./Models/barrel.glb', (model) => {
+  barrel = model.scene;
+  scene.add(barrel);
+  // scene.add(new THREE.BoxHelper(barrel));
+});
+
 debugObject.tubeRotation = -1.5707962925663566;
 debugObject.isRunning = false;
 debugObject.isGoForward = false;
@@ -241,6 +250,12 @@ floor.geometry.setAttribute(
 floor.rotateX(-Math.PI * 0.5);
 scene.add(floor);
 
+const cube = new THREE.Mesh(
+  new THREE.BoxBufferGeometry(1, 1, 1),
+  new THREE.MeshStandardMaterial(),
+);
+scene.add(cube);
+scene.add(new THREE.BoxHelper(cube));
 //
 //
 //
@@ -255,15 +270,23 @@ const tick = () => {
     camera.lookAt(tank.position);
     tank.children[2].rotation.z = debugObject.tubeRotation;
     if (debugObject.isGoForward) {
-      tank.position.x -= Math.sin(elapsedTime * 0.05);
-      if (debugObject.isGoLeft) {
-        tank.rotation.y += elapsedTime * 0.01;
-      }
+      tank.position.x -= Math.sin(elapsedTime * 0.004);
     }
     if (debugObject.isGoBackward) {
-      tank.position.x += Math.sin(elapsedTime * 0.05);
+      tank.position.x += Math.sin(elapsedTime * 0.004);
+    }
+    if (debugObject.isGoLeft) {
+      tank.rotation.y += elapsedTime * 0.002;
+    }
+    if (debugObject.isGoRight) {
+      tank.rotation.y -= elapsedTime * 0.002;
     }
   }
+
+  if (barrel) {
+    barrel.rotation.y = elapsedTime;
+  }
+  cube.rotation.y = elapsedTime;
 
   // Update controls
   controls.update();
