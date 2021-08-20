@@ -75,7 +75,7 @@ const camera = new THREE.PerspectiveCamera(
   75,
   sizes.width / sizes.height,
   0.1,
-  100,
+  1000,
 );
 camera.position.set(2, 2, 5);
 scene.add(camera);
@@ -140,6 +140,7 @@ let barrel;
 
 gltfLoader.load('./Models/barrel.glb', (model) => {
   barrel = model.scene;
+  barrel.position.y = 1.1;
   scene.add(barrel);
   // scene.add(new THREE.BoxHelper(barrel));
 });
@@ -174,9 +175,9 @@ gui
 //Content
 
 // Light
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+const ambientLight = new THREE.AmbientLight(0x8a72d4, 0.1);
 scene.add(ambientLight);
-const directionalLight = new THREE.PointLight(0xffffff, 35);
+const directionalLight = new THREE.PointLight(0x8a72d4, 100);
 directionalLight.position.set(25, 40, 25);
 directionalLight.castShadow = true;
 directionalLight.shadow.mapSize.width = 2024;
@@ -204,9 +205,9 @@ gui
   .name('Directional light Z');
 gui
   .add(directionalLight, 'intensity')
-  .min(0)
-  .max(100)
-  .step(0.001)
+  .min(50)
+  .max(200)
+  .step(0.1)
   .name('Directional light intensity');
 
 // Floor
@@ -231,62 +232,118 @@ floorNormal.repeat.set(18, 18);
 
 const floorRoughness = textureLoader.load('./Textures/floor/roughness.jpg');
 
-const floorGeometry = new THREE.PlaneBufferGeometry(100, 100, 100, 100);
-const floorMaterial = new THREE.MeshStandardMaterial({
-  displacementMap: floorHeight,
-  displacementScale: 0.3,
-  aoMap: floorAmbientTexture,
-  aoMapIntensity: 2,
-  map: floorBaseColor,
-  normalMap: floorNormal,
-  roughnessMap: floorRoughness,
-});
+//Physics
+const world = new CANNON.World();
+world.broadphase = new CANNON.SAPBroadphase(world); // podzieli  wszystko na siatke i bedzie sprawdzalo kolizje tylko z tymi najblizszymi
+world.gravity.set(0, -9, 82, 0);
+world.allowSleep = true;
 
-const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-floor.geometry.setAttribute(
-  'uv2',
-  new BufferAttribute(floor.geometry.attributes.uv.array, 2),
-);
-floor.rotateX(-Math.PI * 0.5);
-scene.add(floor);
+const defaultMaterial = new CANNON.Material('default');
 
-const cube = new THREE.Mesh(
-  new THREE.BoxBufferGeometry(1, 1, 1),
-  new THREE.MeshStandardMaterial(),
-);
-scene.add(cube);
-scene.add(new THREE.BoxHelper(cube));
+const objectsToUpdate = [];
+
+const createSides = (x) => {
+  //Apperance
+  const sideGeometry = new THREE.PlaneBufferGeometry(x, x);
+  const sideMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8a72d4,
+    // side: THREE.DoubleSide,
+  });
+  const sides = new THREE.Group();
+
+  const sideBottom = new THREE.Mesh(sideGeometry, sideMaterial);
+  sideBottom.rotateX(-Math.PI * 0.5);
+  sides.add(sideBottom);
+
+  const sideLeft = new THREE.Mesh(sideGeometry, sideMaterial);
+  sideLeft.position.z -= x / 2;
+  sideLeft.position.y += x / 2;
+  sides.add(sideLeft);
+
+  const sideRight = new THREE.Mesh(sideGeometry, sideMaterial);
+  sideRight.position.z += x / 2;
+  sideRight.rotation.y = Math.PI;
+  sideRight.position.y += x / 2;
+  sides.add(sideRight);
+
+  const sideFront = new THREE.Mesh(sideGeometry, sideMaterial);
+  sideFront.position.x -= x / 2;
+  sideFront.rotation.y = Math.PI / 2;
+  sideFront.position.y += x / 2;
+  sides.add(sideFront);
+
+  const sideBack = new THREE.Mesh(sideGeometry, sideMaterial);
+  sideBack.position.x += x / 2;
+  sideBack.rotation.y = -Math.PI / 2;
+  sideBack.position.y += x / 2;
+  sides.add(sideBack);
+
+  // const sideRight = new THREE.Mesh(sideGeometry, sideMaterial);
+  // sideBottom.rotation.y = Math.PI * 0.5;
+  // sides.add(sideRight);
+
+  // const sideFront = new THREE.Mesh(sideGeometry, sideMaterial);
+  // sideBottom.rotation.z = -Math.PI * 0.5;
+  // sides.add(sideFront);
+
+  // const sideBack = new THREE.Mesh(sideGeometry, sideMaterial);
+  // sideBottom.rotation.z = Math.PI * 0.5;
+  // sides.add(sideBack);
+
+  scene.add(sides);
+  //Physics
+};
+createSides(200);
+
+// const floorGeometry = new THREE.PlaneBufferGeometry(100, 100, 100, 100);
+// const floorMaterial = new THREE.MeshStandardMaterial({
+//   displacementMap: floorHeight,
+//   displacementScale: 0.3,
+//   aoMap: floorAmbientTexture,
+//   aoMapIntensity: 2,
+//   map: floorBaseColor,
+//   normalMap: floorNormal,
+//   roughnessMap: floorRoughness,
+// });
+
+// const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+// floor.geometry.setAttribute(
+//   'uv2',
+//   new BufferAttribute(floor.geometry.attributes.uv.array, 2),
+// );
+// floor.rotateX(-Math.PI * 0.5);
+// scene.add(floor);
+
 //
 //
 //
 //Animate
 const clock = new THREE.Clock();
+let oldTime = 0; //we need this to calc delta for physics
 
 const tick = () => {
   const elapsedTime = clock.getElapsedTime();
+  const deltaTime = elapsedTime - oldTime;
+  oldTime = elapsedTime;
+
   stats.begin();
 
   if (tank) {
     camera.lookAt(tank.position);
     tank.children[2].rotation.z = debugObject.tubeRotation;
     if (debugObject.isGoForward) {
-      tank.position.x -= Math.sin(elapsedTime * 0.004);
+      tank.position.x -= Math.sin(elapsedTime) * 0.1;
     }
     if (debugObject.isGoBackward) {
-      tank.position.x += Math.sin(elapsedTime * 0.004);
+      tank.position.x += Math.sin(elapsedTime) * 0.1;
     }
     if (debugObject.isGoLeft) {
-      tank.rotation.y += elapsedTime * 0.002;
+      tank.rotation.y += elapsedTime * 0.001;
     }
     if (debugObject.isGoRight) {
-      tank.rotation.y -= elapsedTime * 0.002;
+      tank.rotation.y -= elapsedTime * 0.001;
     }
   }
-
-  if (barrel) {
-    barrel.rotation.y = elapsedTime;
-  }
-  cube.rotation.y = elapsedTime;
 
   // Update controls
   controls.update();
