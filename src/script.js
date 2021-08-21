@@ -130,19 +130,12 @@ scene.environment = envMap;
 debugObject.envMapIntensity = 5;
 
 //models
-let tank;
-gltfLoader.load('./Models/tank.glb', (model) => {
-  tank = model.scene;
-  console.log(tank);
-  scene.add(tank);
-});
 
 let barrel;
-
 gltfLoader.load('./Models/barrel.glb', (model) => {
   barrel = model.scene;
   barrel.position.y = 1.1;
-  scene.add(barrel);
+  // scene.add(barrel);
   // scene.add(new THREE.BoxHelper(barrel));
 });
 
@@ -178,8 +171,8 @@ gui
 // Light
 const ambientLight = new THREE.AmbientLight(0x8a72d4, 0.1);
 scene.add(ambientLight);
-const directionalLight = new THREE.PointLight(0x8a72d4, 100);
-directionalLight.position.set(25, 40, 25);
+const directionalLight = new THREE.PointLight(0xffeeff, 150);
+directionalLight.position.set(2, 40, -20);
 directionalLight.castShadow = true;
 directionalLight.shadow.mapSize.width = 1024 * 2;
 directionalLight.shadow.mapSize.height = 1024 * 2;
@@ -213,7 +206,7 @@ gui
 
 // Floor
 
-const floorAmbientTexture = textureLoader.load(
+/*const floorAmbientTexture = textureLoader.load(
   './Textures/floor/ambientOcclusion.jpg',
 );
 const floorBaseColor = textureLoader.load('./Textures/floor/basecolor.jpg');
@@ -231,12 +224,12 @@ floorNormal.wrapS = THREE.RepeatWrapping;
 floorNormal.wrapT = THREE.RepeatWrapping;
 floorNormal.repeat.set(18, 18);
 
-const floorRoughness = textureLoader.load('./Textures/floor/roughness.jpg');
+const floorRoughness = textureLoader.load('./Textures/floor/roughness.jpg');*/
 
 //Physics
 const world = new CANNON.World();
 world.broadphase = new CANNON.SAPBroadphase(world); // podzieli  wszystko na siatke i bedzie sprawdzalo kolizje tylko z tymi najblizszymi
-world.gravity.set(0, -9, 82, 0);
+world.gravity.set(0, -9.82, 0);
 world.allowSleep = true;
 
 const defaultMaterial = new CANNON.Material('default');
@@ -299,13 +292,14 @@ const createSides = (x) => {
     mass: 0,
     shape: sideBottomShape,
   });
+  sideBottomBody.position.y -= 0.7;
   sideBottomBody.quaternion.setFromAxisAngle(
     new CANNON.Vec3(-1, 0, 0),
     Math.PI * 0.5,
   ); // pierwszy argument to oś według której obracamy a drugi to stopień
   world.addBody(sideBottomBody);
 
-  //Left
+  // //Left
   const sideLeftShape = new CANNON.Plane();
   const sideLeftBody = new CANNON.Body({
     mass: 0,
@@ -314,7 +308,7 @@ const createSides = (x) => {
   sideLeftBody.position.z -= x / 2;
   world.addBody(sideLeftBody);
 
-  //Right
+  // //Right
   const sideRightShape = new CANNON.Plane();
   const sideRightBody = new CANNON.Body({
     mass: 0,
@@ -324,7 +318,7 @@ const createSides = (x) => {
   sideRightBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, -1, 0), Math.PI);
   world.addBody(sideRightBody);
 
-  //Front
+  // //Front
   const sideFrontShape = new CANNON.Plane();
   const sideFrontBody = new CANNON.Body({
     mass: 0,
@@ -332,7 +326,7 @@ const createSides = (x) => {
   });
   sideFrontBody.position.x -= x / 2;
   sideFrontBody.quaternion.setFromAxisAngle(
-    new CANNON.Vec3(0, -1, 0),
+    new CANNON.Vec3(0, 1, 0),
     Math.PI / 2,
   );
   world.addBody(sideFrontBody);
@@ -345,31 +339,63 @@ const createSides = (x) => {
   });
   sideBackBody.position.x += x / 2;
   sideBackBody.quaternion.setFromAxisAngle(
-    new CANNON.Vec3(0, -1, 0),
+    new CANNON.Vec3(0, 1, 0),
     -Math.PI / 2,
   );
   world.addBody(sideBackBody);
 };
-createSides(200);
+createSides(300);
 
-// const floorGeometry = new THREE.PlaneBufferGeometry(100, 100, 100, 100);
-// const floorMaterial = new THREE.MeshStandardMaterial({
-//   displacementMap: floorHeight,
-//   displacementScale: 0.3,
-//   aoMap: floorAmbientTexture,
-//   aoMapIntensity: 2,
-//   map: floorBaseColor,
-//   normalMap: floorNormal,
-//   roughnessMap: floorRoughness,
-// });
+const createTank = () => {
+  //Threejs
+  const tankMesh = new THREE.Mesh(
+    new THREE.BoxBufferGeometry(2.35, 3.1, 2.1),
+    new THREE.MeshStandardMaterial(),
+  );
+  tankMesh.position.set(0, 0, 0);
+  scene.add(tankMesh);
+  // let tankMesh;
+  // gltfLoader.load('./Models/tank.glb', (model) => {
+  //   tankMesh = model.scene;
+  // scene.add(tankMesh);
+  // });
+  //Physics
+  const tankShape = new CANNON.Box(new CANNON.Vec3(2.35, 3.1, 2.1));
+  const tankBody = new CANNON.Body({
+    mass: 1,
+    shape: tankShape,
+  });
+  tankBody.position.set(0, 0, 0);
+  world.addBody(tankBody);
 
-// const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-// floor.geometry.setAttribute(
-//   'uv2',
-//   new BufferAttribute(floor.geometry.attributes.uv.array, 2),
+  objectsToUpdate.push({ mesh: tankMesh, body: tankBody, name: 'tank' });
+};
+createTank();
+
+//TANK SIZE const boxTest = new THREE.Mesh(
+//   // new THREE.BoxBufferGeometry(4.15, 3.1, 2.1),
+//   new THREE.BoxBufferGeometry(2.35, 3.1, 2.1),
+//   new THREE.MeshStandardMaterial(),
 // );
-// floor.rotateX(-Math.PI * 0.5);
-// scene.add(floor);
+// scene.add(boxTest);
+
+//Test
+const boxMesh = new THREE.Mesh(
+  new THREE.BoxBufferGeometry(1, 1, 1),
+  new THREE.MeshStandardMaterial(),
+);
+boxMesh.position.y = 35;
+scene.add(boxMesh);
+
+const boxShape = new CANNON.Box(new CANNON.Vec3(1, 1, 1));
+const boxBody = new CANNON.Body({
+  mass: 50,
+  shape: boxShape,
+});
+boxBody.position.y = 35;
+
+world.addBody(boxBody);
+objectsToUpdate.push({ mesh: boxMesh, body: boxBody });
 
 //
 //
@@ -385,22 +411,32 @@ const tick = () => {
 
   stats.begin();
 
-  if (tank) {
-    camera.lookAt(tank.position);
-    tank.children[2].rotation.z = debugObject.tubeRotation;
-    if (debugObject.isGoForward) {
-      tank.translateX(-elapsedTime * 0.01);
+  //Update physics
+  world.step(1 / 60, deltaTime, 3);
+  objectsToUpdate.forEach((object) => {
+    object.mesh.position.copy(object.body.position);
+    object.mesh.quaternion.copy(object.body.quaternion);
+
+    if (object.name == 'tank') {
     }
-    if (debugObject.isGoBackward) {
-      tank.translateX(elapsedTime * 0.01);
-    }
-    if (debugObject.isGoLeft) {
-      tank.rotation.y += elapsedTime * 0.01;
-    }
-    if (debugObject.isGoRight) {
-      tank.rotation.y -= elapsedTime * 0.01;
-    }
-  }
+  });
+
+  // if (tank) {
+  //   camera.lookAt(tank.position);
+  //   tank.children[2].rotation.z = debugObject.tubeRotation;
+  //   if (debugObject.isGoForward) {
+  //     tank.translateX(-elapsedTime * 0.001);
+  //   }
+  //   if (debugObject.isGoBackward) {
+  //     tank.translateX(elapsedTime * 0.001);
+  //   }
+  //   if (debugObject.isGoLeft) {
+  //     tank.rotation.y += elapsedTime * 0.001;
+  //   }
+  //   if (debugObject.isGoRight) {
+  //     tank.rotation.y -= elapsedTime * 0.001;
+  //   }
+  // }
 
   // Update controls
   controls.update();
