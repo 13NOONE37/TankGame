@@ -84,6 +84,7 @@ scene.add(camera);
 const controls = new OrbitControls(camera, canvas);
 controls.target.set(0, 0.75, 0);
 controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI / 2;
 // controls.minDistance = 5;
 // controls.maxDistance = 15;
 
@@ -180,8 +181,8 @@ scene.add(ambientLight);
 const directionalLight = new THREE.PointLight(0x8a72d4, 100);
 directionalLight.position.set(25, 40, 25);
 directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.width = 2024;
-directionalLight.shadow.mapSize.height = 2024;
+directionalLight.shadow.mapSize.width = 1024 * 2;
+directionalLight.shadow.mapSize.height = 1024 * 2;
 directionalLight.shadow.normalBias = 0.05;
 scene.add(directionalLight);
 
@@ -240,6 +241,16 @@ world.allowSleep = true;
 
 const defaultMaterial = new CANNON.Material('default');
 
+const contactDefaultMaterial = new CANNON.ContactMaterial(
+  defaultMaterial,
+  defaultMaterial,
+  {
+    fiction: 0.1,
+    restitution: 0.7,
+  },
+);
+world.defaultContactMaterial = contactDefaultMaterial;
+
 const objectsToUpdate = [];
 
 const createSides = (x) => {
@@ -278,20 +289,66 @@ const createSides = (x) => {
   sideBack.position.y += x / 2;
   sides.add(sideBack);
 
-  // const sideRight = new THREE.Mesh(sideGeometry, sideMaterial);
-  // sideBottom.rotation.y = Math.PI * 0.5;
-  // sides.add(sideRight);
-
-  // const sideFront = new THREE.Mesh(sideGeometry, sideMaterial);
-  // sideBottom.rotation.z = -Math.PI * 0.5;
-  // sides.add(sideFront);
-
-  // const sideBack = new THREE.Mesh(sideGeometry, sideMaterial);
-  // sideBottom.rotation.z = Math.PI * 0.5;
-  // sides.add(sideBack);
-
   scene.add(sides);
+
   //Physics
+
+  //Bottom
+  const sideBottomShape = new CANNON.Plane();
+  const sideBottomBody = new CANNON.Body({
+    mass: 0,
+    shape: sideBottomShape,
+  });
+  sideBottomBody.quaternion.setFromAxisAngle(
+    new CANNON.Vec3(-1, 0, 0),
+    Math.PI * 0.5,
+  ); // pierwszy argument to oś według której obracamy a drugi to stopień
+  world.addBody(sideBottomBody);
+
+  //Left
+  const sideLeftShape = new CANNON.Plane();
+  const sideLeftBody = new CANNON.Body({
+    mass: 0,
+    shape: sideLeftShape,
+  });
+  sideLeftBody.position.z -= x / 2;
+  world.addBody(sideLeftBody);
+
+  //Right
+  const sideRightShape = new CANNON.Plane();
+  const sideRightBody = new CANNON.Body({
+    mass: 0,
+    shape: sideRightShape,
+  });
+  sideRightBody.position.z += x / 2;
+  sideRightBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, -1, 0), Math.PI);
+  world.addBody(sideRightBody);
+
+  //Front
+  const sideFrontShape = new CANNON.Plane();
+  const sideFrontBody = new CANNON.Body({
+    mass: 0,
+    shape: sideFrontShape,
+  });
+  sideFrontBody.position.x -= x / 2;
+  sideFrontBody.quaternion.setFromAxisAngle(
+    new CANNON.Vec3(0, -1, 0),
+    Math.PI / 2,
+  );
+  world.addBody(sideFrontBody);
+
+  //Back
+  const sideBackShape = new CANNON.Plane();
+  const sideBackBody = new CANNON.Body({
+    mass: 0,
+    shape: sideBackShape,
+  });
+  sideBackBody.position.x += x / 2;
+  sideBackBody.quaternion.setFromAxisAngle(
+    new CANNON.Vec3(0, -1, 0),
+    -Math.PI / 2,
+  );
+  world.addBody(sideBackBody);
 };
 createSides(200);
 
@@ -332,16 +389,16 @@ const tick = () => {
     camera.lookAt(tank.position);
     tank.children[2].rotation.z = debugObject.tubeRotation;
     if (debugObject.isGoForward) {
-      tank.position.x -= Math.sin(elapsedTime) * 0.1;
+      tank.translateX(-elapsedTime * 0.01);
     }
     if (debugObject.isGoBackward) {
-      tank.position.x += Math.sin(elapsedTime) * 0.1;
+      tank.translateX(elapsedTime * 0.01);
     }
     if (debugObject.isGoLeft) {
-      tank.rotation.y += elapsedTime * 0.001;
+      tank.rotation.y += elapsedTime * 0.01;
     }
     if (debugObject.isGoRight) {
-      tank.rotation.y -= elapsedTime * 0.001;
+      tank.rotation.y -= elapsedTime * 0.01;
     }
   }
 
