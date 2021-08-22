@@ -21,9 +21,11 @@ stats.showPanel(0);
 document.body.appendChild(stats.dom);
 
 //Loaders
+let isLoaded = false;
 const loaderManager = new THREE.LoadingManager(
   (e) => {
     console.log('loaded');
+    isLoaded = true;
     updateAllMaterials();
   },
   (e) => {
@@ -96,7 +98,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.physicallyCorrectLights = true;
 renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.toneMapping = THREE.ReinhardToneMapping;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 3;
 
 //Update all materials
@@ -129,16 +131,6 @@ scene.background = envMap;
 scene.environment = envMap;
 debugObject.envMapIntensity = 5;
 
-//models
-
-let barrel;
-gltfLoader.load('./Models/barrel.glb', (model) => {
-  barrel = model.scene;
-  barrel.position.y = 1.1;
-  // scene.add(barrel);
-  // scene.add(new THREE.BoxHelper(barrel));
-});
-
 debugObject.tubeRotation = -1.5707962925663566;
 debugObject.isRunning = false;
 debugObject.isGoForward = false;
@@ -146,6 +138,7 @@ debugObject.isGoBackward = false;
 debugObject.isGoLeft = false;
 debugObject.isGoRight = false;
 debugObject.tankVelocity = 0;
+debugObject.tankMaxVelocity = 1;
 
 //control
 controler(debugObject);
@@ -238,8 +231,8 @@ const contactDefaultMaterial = new CANNON.ContactMaterial(
   defaultMaterial,
   defaultMaterial,
   {
-    fiction: 0.1,
-    restitution: 0.7,
+    fiction: 5,
+    restitution: 0.2,
   },
 );
 world.defaultContactMaterial = contactDefaultMaterial;
@@ -292,11 +285,12 @@ const createSides = (x) => {
     mass: 0,
     shape: sideBottomShape,
   });
-  sideBottomBody.position.y -= 0.7;
+  sideBottomBody.position.y -= 0;
   sideBottomBody.quaternion.setFromAxisAngle(
     new CANNON.Vec3(-1, 0, 0),
     Math.PI * 0.5,
   ); // pierwszy argument to oś według której obracamy a drugi to stopień
+
   world.addBody(sideBottomBody);
 
   // //Left
@@ -346,29 +340,32 @@ const createSides = (x) => {
 };
 createSides(300);
 
+// Tank
 const createTank = () => {
-  //Threejs
-  const tankMesh = new THREE.Mesh(
-    new THREE.BoxBufferGeometry(2.35, 3.1, 2.1),
-    new THREE.MeshStandardMaterial(),
-  );
-  tankMesh.position.set(0, 0, 0);
-  scene.add(tankMesh);
-  // let tankMesh;
-  // gltfLoader.load('./Models/tank.glb', (model) => {
-  //   tankMesh = model.scene;
-  // scene.add(tankMesh);
-  // });
   //Physics
+  //dodac lufe https://schteppe.github.io/cannon.js/docs/classes/PointToPointConstraint.html
   const tankShape = new CANNON.Box(new CANNON.Vec3(2.35, 3.1, 2.1));
   const tankBody = new CANNON.Body({
-    mass: 1,
+    mass: 1000,
     shape: tankShape,
   });
   tankBody.position.set(0, 0, 0);
   world.addBody(tankBody);
 
-  objectsToUpdate.push({ mesh: tankMesh, body: tankBody, name: 'tank' });
+  //Threejs
+  const test = new THREE.Mesh(
+    new THREE.BoxBufferGeometry(2.35, 3.1, 2.1),
+    new THREE.MeshStandardMaterial(),
+  );
+  scene.add(test);
+  objectsToUpdate.push({ mesh: test, body: tankBody, name: 'tank' });
+
+  // let tankMesh;
+  // gltfLoader.load('./Models/tank.glb', (model) => {
+  //   tankMesh = model.scene;
+  //   scene.add(tankMesh);
+  //   objectsToUpdate.push({ mesh: tankMesh, body: tankBody, name: 'tank' });
+  // });
 };
 createTank();
 
@@ -392,7 +389,7 @@ const boxBody = new CANNON.Body({
   mass: 50,
   shape: boxShape,
 });
-boxBody.position.y = 35;
+boxBody.position.y = 0;
 
 world.addBody(boxBody);
 objectsToUpdate.push({ mesh: boxMesh, body: boxBody });
@@ -411,32 +408,34 @@ const tick = () => {
 
   stats.begin();
 
-  //Update physics
-  world.step(1 / 60, deltaTime, 3);
-  objectsToUpdate.forEach((object) => {
-    object.mesh.position.copy(object.body.position);
-    object.mesh.quaternion.copy(object.body.quaternion);
+  if (isLoaded) {
+    //Update physics
+    world.step(1 / 60, deltaTime, 3);
+    objectsToUpdate.forEach((object) => {
+      object.mesh.position.copy(object.body.position);
+      object.mesh.quaternion.copy(object.body.quaternion);
 
-    if (object.name == 'tank') {
-    }
-  });
+      if (object.name == 'tank') {
+      }
+    });
 
-  // if (tank) {
-  //   camera.lookAt(tank.position);
-  //   tank.children[2].rotation.z = debugObject.tubeRotation;
-  //   if (debugObject.isGoForward) {
-  //     tank.translateX(-elapsedTime * 0.001);
-  //   }
-  //   if (debugObject.isGoBackward) {
-  //     tank.translateX(elapsedTime * 0.001);
-  //   }
-  //   if (debugObject.isGoLeft) {
-  //     tank.rotation.y += elapsedTime * 0.001;
-  //   }
-  //   if (debugObject.isGoRight) {
-  //     tank.rotation.y -= elapsedTime * 0.001;
-  //   }
-  // }
+    // if (isLoaded) {
+    //   camera.lookAt(tank.position);
+    //   tank.children[2].rotation.z = debugObject.tubeRotation;
+    //   if (debugObject.isGoForward) {
+    //     tank.translateX(-elapsedTime * 0.001);
+    //   }
+    //   if (debugObject.isGoBackward) {
+    //     tank.translateX(elapsedTime * 0.001);
+    //   }
+    //   if (debugObject.isGoLeft) {
+    //     tank.rotation.y += elapsedTime * 0.001;
+    //   }
+    //   if (debugObject.isGoRight) {
+    //     tank.rotation.y -= elapsedTime * 0.001;
+    //   }
+    // }
+  }
 
   // Update controls
   controls.update();
