@@ -231,7 +231,7 @@ const contactDefaultMaterial = new CANNON.ContactMaterial(
   defaultMaterial,
   defaultMaterial,
   {
-    fiction: 5,
+    fiction: 0,
     restitution: 0.2,
   },
 );
@@ -341,40 +341,27 @@ const createSides = (x) => {
 createSides(300);
 
 // Tank
+let tankMesh;
 const createTank = () => {
   //Physics
   //dodac lufe https://schteppe.github.io/cannon.js/docs/classes/PointToPointConstraint.html
   const tankShape = new CANNON.Box(new CANNON.Vec3(2.35, 3.1, 2.1));
   const tankBody = new CANNON.Body({
-    mass: 1000,
+    mass: 150,
     shape: tankShape,
   });
   tankBody.position.set(0, 0, 0);
   world.addBody(tankBody);
 
   //Threejs
-  const test = new THREE.Mesh(
-    new THREE.BoxBufferGeometry(2.35, 3.1, 2.1),
-    new THREE.MeshStandardMaterial(),
-  );
-  scene.add(test);
-  objectsToUpdate.push({ mesh: test, body: tankBody, name: 'tank' });
 
-  // let tankMesh;
-  // gltfLoader.load('./Models/tank.glb', (model) => {
-  //   tankMesh = model.scene;
-  //   scene.add(tankMesh);
-  //   objectsToUpdate.push({ mesh: tankMesh, body: tankBody, name: 'tank' });
-  // });
+  gltfLoader.load('./Models/tank.glb', (model) => {
+    tankMesh = model.scene;
+    scene.add(tankMesh);
+    objectsToUpdate.push({ mesh: tankMesh, body: tankBody, name: 'tank' });
+  });
 };
 createTank();
-
-//TANK SIZE const boxTest = new THREE.Mesh(
-//   // new THREE.BoxBufferGeometry(4.15, 3.1, 2.1),
-//   new THREE.BoxBufferGeometry(2.35, 3.1, 2.1),
-//   new THREE.MeshStandardMaterial(),
-// );
-// scene.add(boxTest);
 
 //Test
 const boxMesh = new THREE.Mesh(
@@ -414,9 +401,6 @@ const tick = () => {
     objectsToUpdate.forEach((object) => {
       object.mesh.position.copy(object.body.position);
       object.mesh.quaternion.copy(object.body.quaternion);
-
-      if (object.name == 'tank') {
-      }
     });
 
     // if (isLoaded) {
